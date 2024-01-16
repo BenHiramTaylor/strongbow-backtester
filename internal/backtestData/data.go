@@ -496,9 +496,9 @@ func (d *Data) CalculateUnbrokenHighsLows(
 
 // CalculateStochasticOscillator computes the stochastic oscillator (%K and %D)
 // for each Row in the Data slice. This function requires a predefined number of periods
-// for calculating %K and %D. The %K value is calculated based on the closing price's
-// position relative to the high-low range over a certain period. %D is then calculated
-// as the simple moving average of %K over a specified number of periods.
+// for calculating %K (kPeriods) and %D (dPeriods). The %K value is calculated based on
+// the closing price's position relative to the high-low range over a certain period. %D is
+// then calculated as the simple moving average of %K over the specified number of periods.
 //
 // Parameters:
 // kPeriods: Number of periods to consider for calculating the high-low range and %K.
@@ -507,12 +507,16 @@ func (d *Data) CalculateUnbrokenHighsLows(
 // Note: The function will not calculate the oscillator for Rows where there is insufficient
 // historical data (less than kPeriods). It assumes that the data in Data is ordered chronologically.
 func (d *Data) CalculateStochasticOscillator(kPeriods int, dPeriods int) {
+	// Check if there are enough data points to calculate the oscillator
 	if len(*d) < kPeriods {
 		return // Not enough data to calculate
 	}
 
 	for i := kPeriods - 1; i < len(*d); i++ {
-		var lowestLow, highestHigh = math.MaxFloat64, -math.MaxFloat64
+		// Initialize variables for the highest high and lowest low
+		var lowestLow, highestHigh float64 = math.MaxFloat64, -math.MaxFloat64
+
+		// Iterate over the last kPeriods to find the highest high and lowest low
 		for j := i - kPeriods + 1; j <= i; j++ {
 			if (*d)[j].Low < lowestLow {
 				lowestLow = (*d)[j].Low
@@ -522,17 +526,25 @@ func (d *Data) CalculateStochasticOscillator(kPeriods int, dPeriods int) {
 			}
 		}
 
+		// Calculate %K based on the current closing price, highest high, and lowest low
 		currentClose := (*d)[i].Close
-		stochasticK := (currentClose - lowestLow) / (highestHigh - lowestLow) * 100
-		(*d)[i].StochasticK = stochasticK
+		// Ensure division by zero is handled
+		if highestHigh != lowestLow {
+			stochasticK := (currentClose - lowestLow) / (highestHigh - lowestLow) * 100
+			(*d)[i].StochasticK = utils.RoundToDecimalLength(stochasticK, 0.00001)
+		} else {
+			(*d)[i].StochasticK = 0 // Assign a default value in case of no price change
+		}
 
-		// Calculate %D as SMA of %K
+		// Calculate %D as SMA of %K if there are enough data points
 		if i >= kPeriods+dPeriods-1 {
 			sumK := 0.0
+			// Summing %K over dPeriods for the SMA calculation
 			for j := i - dPeriods + 1; j <= i; j++ {
 				sumK += (*d)[j].StochasticK
 			}
-			(*d)[i].StochasticD = sumK / float64(dPeriods)
+			// Assign the calculated SMA of %K to %D
+			(*d)[i].StochasticD = utils.RoundToDecimalLength(sumK/float64(dPeriods), 0.00001)
 		}
 	}
 }

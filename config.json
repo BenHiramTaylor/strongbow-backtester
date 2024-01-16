@@ -4,12 +4,16 @@
     "NQ": {
       "MinimumRR": 2.0,
       "StopSizeAddition": 2,
-      "TrailingStopAmount": 10,
+      "TrailingStopAmount": 0,
       "LargeSMALookbackAmount": 200,
       "SmallSMALookbackAmount": 50,
       "UnbrokenBoundaryLeftBars": 3,
       "UnbrokenBoundaryRightBars": 3,
-      "UnbrokenBoundaryMemoryLimit": 50
+      "UnbrokenBoundaryMemoryLimit": 50,
+      "StochasticUpperBand": 80,
+      "StochasticLowerBand": 20,
+      "StochasticKPeriods": 14,
+      "StochasticDPeriods": 3
     }
   },
   "StartingBalance": 10000
