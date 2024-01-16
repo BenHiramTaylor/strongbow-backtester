@@ -102,7 +102,7 @@ func calculateRR(oneRisk, targetSize float64) float64 {
 // and checks to generate a pointer to a Trade object, or an error.
 func GenerateTradesInWindow(
 	tradeWindow backtestData.Data,
-	instrumentConfig utils.InstrumentConfiguration, // Change the parameter to InstrumentConfiguration
+	instrumentConfig *utils.InstrumentConfiguration, // Change the parameter to InstrumentConfiguration
 	instrument string,
 	tickSize float64,
 ) Trades {
@@ -259,7 +259,7 @@ func GenerateTradesInWindow(
 		inTrade = true
 
 		// Validate the trade
-		trade.ValidateTradeWithWindow(tradeWindow, instrumentConfig.TrailingStopAmount, tickSize)
+		trade.ValidateTradeWithWindow(tradeWindow, instrumentConfig, tickSize)
 
 		// Add the trade to the results
 		trades = append(trades, trade)
@@ -272,15 +272,15 @@ func GenerateTradesInWindow(
 // It determines if the trade hits the Stop/Target or expires at the end of the session.
 func (t *Trade) ValidateTradeWithWindow(
 	tradeWindow backtestData.Data,
-	trailingStopAmount int,
+	instrumentConfig *utils.InstrumentConfiguration,
 	tickSize float64,
 ) {
 	// Create trailing stop amount
 	var trailingStopValue float64
-	if trailingStopAmount == 0 {
+	if instrumentConfig.TrailingStopAmount == 0 {
 		trailingStopValue = 0.0
 	} else {
-		trailingStopValue = tickSize * float64(trailingStopAmount)
+		trailingStopValue = tickSize * float64(instrumentConfig.TrailingStopAmount)
 	}
 
 	// Iterate over rows in the trade window
@@ -292,6 +292,7 @@ func (t *Trade) ValidateTradeWithWindow(
 
 		// Determine the trade outcome based on the trade direction and price conditions
 		switch {
+		// If the trade is a LONG and the current row's low is less than or equal to the stop
 		case t.Direction == utils.TradeDirection.LONG && row.Low <= t.StopPrice:
 			// Stop condition met for a LONG trade
 			log.Debug().Msgf("Stop condition met for a LONG trade at %v as Stop: %f Low: %f",
@@ -304,6 +305,7 @@ func (t *Trade) ValidateTradeWithWindow(
 			t.ClosedAtTime = row.Time
 			return // Exiting the loop as the trade is closed
 
+		// If the trade is a SHORT and the current row's high is greater than or equal to the stop
 		case t.Direction == utils.TradeDirection.SHORT && row.High >= t.StopPrice:
 			// Stop condition met for a SHORT trade
 			log.Debug().Msgf("Stop condition met for a SHORT trade at %v as Stop: %f High: %f",
@@ -316,6 +318,7 @@ func (t *Trade) ValidateTradeWithWindow(
 			t.ClosedAtTime = row.Time
 			return // Exiting the loop as the trade is closed
 
+		// If the trade is a LONG and the current row's high is greater than or equal to the target
 		case t.Direction == utils.TradeDirection.LONG && row.High >= t.TargetPrice:
 			// Target condition met for a LONG trade
 			log.Debug().Msgf("Target condition met for a LONG trade at %v as Target: %f High: %f",
@@ -328,6 +331,7 @@ func (t *Trade) ValidateTradeWithWindow(
 			t.ClosedAtTime = row.Time
 			return // Exiting the loop as the trade is closed
 
+		// If the trade is a SHORT and the current row's low is less than or equal to the target
 		case t.Direction == utils.TradeDirection.SHORT && row.Low <= t.TargetPrice:
 			// Target condition met for a SHORT trade
 			log.Debug().Msgf("Target condition met for a SHORT trade at %v as Target: %f Low: %f",
@@ -339,13 +343,8 @@ func (t *Trade) ValidateTradeWithWindow(
 			t.ClosedAtTime = row.Time
 			return // Exiting the loop as the trade is closed
 
-		default:
-			// A default clause for moving the stop along if it is trailing
-			if trailingStopAmount == 0 {
-				// If no trailing stop then continue
-				continue
-			}
-
+		// If the TrailingStopAmount is set to a value greater than 0
+		case instrumentConfig.TrailingStopAmount > 0:
 			// If the trade is LONG and the current row's high is greater than the stop
 			// then move the stop up to the current row's high minus the trailing stop value
 			if t.Direction == utils.TradeDirection.LONG && row.High > t.EntryPrice {
@@ -362,6 +361,27 @@ func (t *Trade) ValidateTradeWithWindow(
 				// Round the stop price to the tick size
 				t.StopPrice = utils.RoundToDecimalLength(t.StopPrice, tickSize)
 				log.Debug().Msgf("Trailing stop moved down to %f", t.StopPrice)
+			}
+
+		// If the MoveToBreakEvenAt is set to a value greater than 0
+		case instrumentConfig.MoveToBreakEvenAt > 0:
+			// Calculate the profit target to move to break even, based on the percentage specified in the configuration
+			profitTarget := t.EntryPrice * (1 + instrumentConfig.MoveToBreakEvenAt/100)
+
+			// Determine if the profit target is reached for LONG or SHORT trades
+			profitTargetReached := false
+			if t.Direction == utils.TradeDirection.LONG {
+				// For a LONG trade, the profit target is reached when the high price exceeds the profit target
+				profitTargetReached = row.High >= profitTarget
+			} else if t.Direction == utils.TradeDirection.SHORT {
+				// For a SHORT trade, the profit target is reached when the low price is less than or equal to the profit target
+				profitTargetReached = row.Low <= profitTarget
+			}
+
+			// If the profit target is reached, move the stop price to the entry price
+			if profitTargetReached {
+				t.StopPrice = t.EntryPrice
+				log.Debug().Msgf("Moved stop to break-even (entry price) at %f", t.StopPrice)
 			}
 		}
 	}

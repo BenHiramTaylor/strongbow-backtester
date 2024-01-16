@@ -105,7 +105,7 @@ func main() {
 
 			// Calculate the long and short SMAs and populate the values to the data
 			log.Info().Str("instrument", localInstrumentName).Msg("Calculating SMA values")
-			err = instrumentData.CalculateSMA(&instrumentConfig, tickSize)
+			err = instrumentData.CalculateSMA(instrumentConfig, tickSize)
 			if err != nil {
 				handleErrorAndExit(err)
 			}

@@ -69,7 +69,7 @@ type Configuration struct {
 	BacktestEndDate JsonDate `json:"BacktestEndDate,omitempty"`
 
 	// Instruments to backtest on
-	Instruments map[string]InstrumentConfiguration `json:"instruments"`
+	Instruments map[string]*InstrumentConfiguration `json:"instruments"`
 
 	// StartingBalance is a number to use as a balance to applied simulated profit to. (optional defaults to 10k)
 	StartingBalance float64 `json:"StartingBalance,omitempty"`
