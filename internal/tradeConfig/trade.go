@@ -363,8 +363,8 @@ func (t *Trade) ValidateTradeWithWindow(
 				log.Debug().Msgf("Trailing stop moved down to %f", t.StopPrice)
 			}
 
-		// If the MoveToBreakEvenAt is set to a value greater than 0
-		case instrumentConfig.MoveToBreakEvenAt > 0:
+		// If the MoveToBreakEvenAt is set to a value greater than 0 and the stop price is not equal to the entry price (we have not changed it yet)
+		case instrumentConfig.MoveToBreakEvenAt > 0 && t.StopPrice != t.EntryPrice:
 			// Calculate the profit target to move to break even, based on the percentage specified in the configuration
 			profitTarget := t.EntryPrice * (1 + instrumentConfig.MoveToBreakEvenAt/100)
 
