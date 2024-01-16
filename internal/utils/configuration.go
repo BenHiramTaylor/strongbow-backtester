@@ -43,6 +43,18 @@ type InstrumentConfiguration struct {
 	// for example: so if that value is 50 then any unbroken highs/lows are dropped until we are down to 50
 	// starting with the oldest first.
 	UnbrokenBoundaryMemoryLimit int `json:"UnbrokenBoundaryMemoryLimit"`
+
+	// StochasticUpperBand is the upper band for the stochastic oscillator
+	StochasticUpperBand float64 `json:"StochasticUpperBand"`
+
+	// StochasticLowerBand is the lower band for the stochastic oscillator
+	StochasticLowerBand float64 `json:"StochasticLowerBand"`
+
+	// StochasticKPeriods is the number of periods to use for the stochastic oscillator
+	StochasticKPeriods int `json:"StochasticKPeriods"`
+
+	// StochasticDPeriods is the number of periods to use for the stochastic oscillator
+	StochasticDPeriods int `json:"StochasticDPeriods"`
 }
 
 // Configuration is a struct representing a read in config.json object

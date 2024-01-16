@@ -111,12 +111,22 @@ func main() {
 			}
 			log.Info().Str("instrument", localInstrumentName).Msg("Calculated SMA values")
 
+			// Calculate the stochastic values and populate the values to the data
+			log.Info().Str("instrument", localInstrumentName).Msg("Calculating Stochastic values")
+			instrumentData.CalculateStochasticOscillator(
+				instrumentConfig.StochasticKPeriods,
+				instrumentConfig.StochasticDPeriods,
+			)
+			log.Info().Str("instrument", localInstrumentName).Msg("Calculated Stochastic values")
+
 			// Calculate the unbroken highs and lows for each candle
 			log.Info().Str("instrument", localInstrumentName).Msg("Calculating unbroken highs and lows")
 			instrumentData.CalculateUnbrokenHighsLows(
 				instrumentConfig.UnbrokenBoundaryLeftBars,
 				instrumentConfig.UnbrokenBoundaryRightBars,
 				instrumentConfig.UnbrokenBoundaryMemoryLimit,
+				instrumentConfig.StochasticUpperBand,
+				instrumentConfig.StochasticLowerBand,
 			)
 
 			log.Info().Str("instrument", localInstrumentName).Msg("Calculated Highs and Lows")
