@@ -19,3 +19,7 @@
 
 # Go workspace file
 go.work
+data/
+Playbook.csv
+back-tester.log
+backtesting_results/*

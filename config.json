@@ -1,0 +1,16 @@
+{
+  "BacktestStartDate": "2023-01-01",
+  "Instruments": {
+    "NQ": {
+      "MinimumRR": 2.0,
+      "StopSizeAddition": 2,
+      "TrailingStopAmount": 10,
+      "LargeSMALookbackAmount": 200,
+      "SmallSMALookbackAmount": 50,
+      "UnbrokenBoundaryLeftBars": 3,
+      "UnbrokenBoundaryRightBars": 3,
+      "UnbrokenBoundaryMemoryLimit": 50
+    }
+  },
+  "StartingBalance": 10000
+}
