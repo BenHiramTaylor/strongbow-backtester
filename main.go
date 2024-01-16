@@ -158,10 +158,11 @@ func main() {
 
 			log.Info().Str("instrument", localInstrumentName).Msg("Filtered by times.")
 
-			// TODO this is temporary so remove this
-			err = instrumentData.WriteToCSV(fmt.Sprintf("./%s.csv", localInstrumentName))
-			if err != nil {
-				handleErrorAndExit(err)
+			if userConfiguration.WriteProcessedDataToFile {
+				err = instrumentData.WriteToCSV(fmt.Sprintf("./%s.csv", localInstrumentName))
+				if err != nil {
+					handleErrorAndExit(err)
+				}
 			}
 
 			// Lock the mutex, add the data to the map and then unlock the mutex to allow thread safety

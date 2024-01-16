@@ -76,6 +76,9 @@ type Configuration struct {
 
 	// Mapping of asset names to tick values (optional)
 	AssetTicks map[string]float64 `json:"AssetTicks,omitempty"`
+
+	// WriteProcessedDataToFile is a boolean to write the processed data to a file (optional defaults to false)
+	WriteProcessedDataToFile bool `json:"WriteProcessedDataToFile,omitempty"`
 }
 
 // newConfiguration This constructor is just an idiomatic wrapper to create default values for fields.
