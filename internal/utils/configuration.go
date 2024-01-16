@@ -55,6 +55,9 @@ type InstrumentConfiguration struct {
 
 	// StochasticDPeriods is the number of periods to use for the stochastic oscillator
 	StochasticDPeriods int `json:"StochasticDPeriods"`
+
+	// MoveToBreakEvenAt is a float64 representing a percentage of profit to move the stop to break even at.
+	MoveToBreakEvenAt float64 `json:"MoveToBreakEvenAt,omitempty"`
 }
 
 // Configuration is a struct representing a read in config.json object

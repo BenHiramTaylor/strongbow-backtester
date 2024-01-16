@@ -4,7 +4,7 @@
     "NQ": {
       "MinimumRR": 2.0,
       "StopSizeAddition": 2,
-      "TrailingStopAmount": 0,
+      "MoveToBreakEvenAt": 50,
       "LargeSMALookbackAmount": 200,
       "SmallSMALookbackAmount": 50,
       "UnbrokenBoundaryLeftBars": 3,
