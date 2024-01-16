@@ -16,5 +16,6 @@
       "StochasticDPeriods": 3
     }
   },
+  "WriteProcessedDataToFile": true,
   "StartingBalance": 10000
 }
