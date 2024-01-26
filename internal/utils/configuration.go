@@ -22,8 +22,8 @@ type InstrumentConfiguration struct {
 	// StopSizeAddition is the number of ticks to add to the stop size.
 	StopSizeAddition int `json:"StopSizeAddition"`
 
-	// TrailingStopAmount is an integer for the amount of ticks to trail the stop by.
-	TrailingStopAmount int `json:"TrailingStopAmount,omitempty"`
+	// TrailingStop is an integer for the amount of ticks to trail the stop by.
+	TrailingStop bool `json:"TrailingStop"`
 
 	// LargeSMALookbackAmount is the amount of candles to lookback and create a larger rolling moving average with.
 	LargeSMALookbackAmount int `json:"LargeSMALookbackAmount"`

@@ -275,14 +275,6 @@ func (t *Trade) ValidateTradeWithWindow(
 	instrumentConfig *utils.InstrumentConfiguration,
 	tickSize float64,
 ) {
-	// Create trailing stop amount
-	var trailingStopValue float64
-	if instrumentConfig.TrailingStopAmount == 0 {
-		trailingStopValue = 0.0
-	} else {
-		trailingStopValue = tickSize * float64(instrumentConfig.TrailingStopAmount)
-	}
-
 	// Iterate over rows in the trade window
 	for _, row := range tradeWindow {
 		// Skip rows that occur before or at the time the trade was taken
@@ -343,25 +335,32 @@ func (t *Trade) ValidateTradeWithWindow(
 			t.ClosedAtTime = row.Time
 			return // Exiting the loop as the trade is closed
 
-		// If the TrailingStopAmount is set to a value greater than 0
-		case instrumentConfig.TrailingStopAmount > 0:
-			// If the trade is LONG and the current row's high is greater than the stop
-			// then move the stop up to the current row's high minus the trailing stop value
-			if t.Direction == utils.TradeDirection.LONG && row.High > t.EntryPrice {
-				t.StopPrice = row.High - trailingStopValue
-
-				// Round the stop price to the tick size
-				t.StopPrice = utils.RoundToDecimalLength(t.StopPrice, tickSize)
-				log.Debug().Msgf("Trailing stop moved up to %f", t.StopPrice)
-			} else if t.Direction == utils.TradeDirection.SHORT && row.Low < t.EntryPrice {
-				// If the trade is SHORT and the current row's low is less than the stop
-				// then move the stop down to the current row's low plus the trailing stop value
-				t.StopPrice = row.Low + trailingStopValue
-
-				// Round the stop price to the tick size
-				t.StopPrice = utils.RoundToDecimalLength(t.StopPrice, tickSize)
-				log.Debug().Msgf("Trailing stop moved down to %f", t.StopPrice)
+		// If the TrailingStop is boolean
+		case instrumentConfig.TrailingStop:
+			// Dynamic Trailing Stop Logic
+			if t.Direction == utils.TradeDirection.LONG {
+				// Calculate the potential new stop price
+				if row.High > t.EntryPrice {
+					potentialNewStop := t.StopPrice + (row.High - t.EntryPrice)
+					potentialNewStop = utils.RoundToDecimalLength(potentialNewStop, tickSize)
+					// Update the stop price if the potential new stop is greater than the current stop price
+					if potentialNewStop > t.StopPrice {
+						t.StopPrice = potentialNewStop
+					}
+				}
+			} else if t.Direction == utils.TradeDirection.SHORT {
+				// Calculate the potential new stop price
+				if row.Low < t.EntryPrice {
+					potentialNewStop := t.StopPrice - (t.EntryPrice - row.Low)
+					potentialNewStop = utils.RoundToDecimalLength(potentialNewStop, tickSize)
+					// Update the stop price if the potential new stop is less than the current stop price
+					if potentialNewStop < t.StopPrice {
+						t.StopPrice = potentialNewStop
+					}
+				}
 			}
+
+			log.Debug().Msgf("Dynamic trailing stop adjusted to %f", t.StopPrice)
 
 		// If the MoveToBreakEvenAt is set to a value greater than 0 and the stop price is not equal to the entry price (we have not changed it yet)
 		case instrumentConfig.MoveToBreakEvenAt > 0 && t.StopPrice != t.EntryPrice:

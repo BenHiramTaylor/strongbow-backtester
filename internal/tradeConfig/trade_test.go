@@ -212,11 +212,11 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				&backtestData.Row{Time: time2, High: 105, Low: 80, Open: 100, Close: 90},
 				&backtestData.Row{Time: time3, High: 90, Low: 60, Open: 90, Close: 75},
 			},
-			instrumentConfig:      &utils.InstrumentConfiguration{TrailingStopAmount: 50},
+			instrumentConfig:      &utils.InstrumentConfiguration{TrailingStop: true},
 			tickSize:              0.5,
 			expectedClosedAtPrice: 75,
 			expectedClosedAtTime:  time3,
-			expectedStopPrice:     85, // This is the Low of the last candle (60) + (50 ticks at 0.5 tick size for 25)
+			expectedStopPrice:     240, // This will be 240 as it starts at 300 and the entry price drops to a low of 60
 		},
 		{
 			name: "Test LONG position trailing STOP",
@@ -228,15 +228,15 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				TargetPrice: 300,
 			},
 			data: backtestData.Data{
-				&backtestData.Row{Time: time1, High: 111, Low: 90, Open: 105, Close: 100},
+				&backtestData.Row{Time: time1, High: 100, Low: 90, Open: 105, Close: 100},
 				&backtestData.Row{Time: time2, High: 105, Low: 80, Open: 100, Close: 90},
 				&backtestData.Row{Time: time3, High: 90, Low: 60, Open: 90, Close: 75},
 			},
-			instrumentConfig:      &utils.InstrumentConfiguration{TrailingStopAmount: 50},
+			instrumentConfig:      &utils.InstrumentConfiguration{TrailingStop: true},
 			tickSize:              0.5,
-			expectedClosedAtPrice: 80,
+			expectedClosedAtPrice: 75,
 			expectedClosedAtTime:  time3,
-			expectedStopPrice:     80, // This is the low of the second candle as the trailing stop on the first candle would be 50 ticks away from the high
+			expectedStopPrice:     55, // This is the stop with an additional 5 ticks as the highest high is 105
 		},
 		{
 			name: "Test LONG position move to BE at 50%",
