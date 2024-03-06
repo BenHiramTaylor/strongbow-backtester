@@ -10,6 +10,9 @@ on:
   # This is here so manual tests can be run
   workflow_dispatch:
 
+permissions:
+  issues: write
+  pull-requests: write
 
 jobs:
   test:
