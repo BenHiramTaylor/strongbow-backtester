@@ -1,5 +1,11 @@
 name: Go Test
-on: pull_request
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+    paths:
+      - "**.go"
 
 
 jobs:
