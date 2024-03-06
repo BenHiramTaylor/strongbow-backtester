@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "**.go"
+
+  # This is here so manual tests can be run
   workflow_dispatch:
 
 
