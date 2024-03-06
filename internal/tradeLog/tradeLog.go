@@ -64,7 +64,7 @@ func NewLog() *Log {
 }
 
 // AddRow is a function that adds a row to a trade log, with some basic formatting on timestamps
-// And some extra column calculations as per request from the Q7 team
+// And some extra column calculations as per request from the OMITTED team
 func AddRow(l *Log, trade *tradeConfig.Trade) *Log {
 	row := &Row{
 		Instrument:       trade.Instrument,
@@ -79,7 +79,7 @@ func AddRow(l *Log, trade *tradeConfig.Trade) *Log {
 		Profit:           0,
 	}
 
-	// Split taken at date and time as per request from Q7 team
+	// Split taken at date and time as per request from OMITTED team
 	row.TakenAtDate = trade.TakenAt.Format("2006-01-02")
 	row.TakenAtTime = trade.TakenAt.Format("15:04:05")
 
