@@ -2,6 +2,7 @@ package tradeConfig
 
 import (
 	"github.com/BenHiramTaylor/strongbow-backtester/internal/backtestData"
+	"github.com/BenHiramTaylor/strongbow-backtester/internal/utils"
 	"reflect"
 	"testing"
 	"time"
@@ -91,7 +92,7 @@ func TestValidateTradeWithWindow(t *testing.T) {
 		name                  string
 		trade                 *Trade
 		data                  backtestData.Data
-		trailingStopAmount    int
+		instrumentConfig      *utils.InstrumentConfiguration
 		tickSize              float64
 		expectedClosedAtPrice float64
 		expectedClosedAtTime  time.Time
@@ -111,7 +112,7 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				&backtestData.Row{Time: time2, Low: 94},
 				&backtestData.Row{Time: time3, Low: 91},
 			},
-			trailingStopAmount:    0,
+			instrumentConfig:      &utils.InstrumentConfiguration{},
 			tickSize:              0.5,
 			expectedClosedAtPrice: 95,
 			expectedClosedAtTime:  time3,
@@ -131,7 +132,7 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				&backtestData.Row{Time: time2, Low: 96, High: 101},
 				&backtestData.Row{Time: time3, Low: 96, High: 150},
 			},
-			trailingStopAmount:    0,
+			instrumentConfig:      &utils.InstrumentConfiguration{},
 			tickSize:              0.5,
 			expectedClosedAtPrice: 110,
 			expectedClosedAtTime:  time3,
@@ -151,7 +152,7 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				&backtestData.Row{Time: time2, High: 112, Low: 104},
 				&backtestData.Row{Time: time3, High: 113, Low: 100},
 			},
-			trailingStopAmount:    0,
+			instrumentConfig:      &utils.InstrumentConfiguration{},
 			tickSize:              0.5,
 			expectedClosedAtPrice: 105,
 			expectedClosedAtTime:  time3,
@@ -171,7 +172,7 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				&backtestData.Row{Time: time2, High: 112, Low: 104},
 				&backtestData.Row{Time: time3, High: 120, Low: 100},
 			},
-			trailingStopAmount:    0,
+			instrumentConfig:      &utils.InstrumentConfiguration{},
 			tickSize:              0.5,
 			expectedClosedAtPrice: 115,
 			expectedClosedAtTime:  time3,
@@ -191,7 +192,7 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				&backtestData.Row{Time: time2, High: 112, Low: 104, Close: 110},
 				&backtestData.Row{Time: time3, High: 112, Low: 107, Close: 111},
 			},
-			trailingStopAmount:    0,
+			instrumentConfig:      &utils.InstrumentConfiguration{},
 			tickSize:              0.5,
 			expectedClosedAtPrice: 111,
 			expectedClosedAtTime:  time3,
@@ -211,11 +212,11 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				&backtestData.Row{Time: time2, High: 105, Low: 80, Open: 100, Close: 90},
 				&backtestData.Row{Time: time3, High: 90, Low: 60, Open: 90, Close: 75},
 			},
-			trailingStopAmount:    50,
+			instrumentConfig:      &utils.InstrumentConfiguration{TrailingStop: true},
 			tickSize:              0.5,
 			expectedClosedAtPrice: 75,
 			expectedClosedAtTime:  time3,
-			expectedStopPrice:     85, // This is the Low of the last candle (60) + (50 ticks at 0.5 tick size for 25)
+			expectedStopPrice:     240, // This will be 240 as it starts at 300 and the entry price drops to a low of 60
 		},
 		{
 			name: "Test LONG position trailing STOP",
@@ -227,21 +228,61 @@ func TestValidateTradeWithWindow(t *testing.T) {
 				TargetPrice: 300,
 			},
 			data: backtestData.Data{
-				&backtestData.Row{Time: time1, High: 111, Low: 90, Open: 105, Close: 100},
+				&backtestData.Row{Time: time1, High: 100, Low: 90, Open: 105, Close: 100},
 				&backtestData.Row{Time: time2, High: 105, Low: 80, Open: 100, Close: 90},
 				&backtestData.Row{Time: time3, High: 90, Low: 60, Open: 90, Close: 75},
 			},
-			trailingStopAmount:    50,
+			instrumentConfig:      &utils.InstrumentConfiguration{TrailingStop: true},
 			tickSize:              0.5,
-			expectedClosedAtPrice: 80,
+			expectedClosedAtPrice: 75,
 			expectedClosedAtTime:  time3,
-			expectedStopPrice:     80, // This is the low of the second candle as the trailing stop on the first candle would be 50 ticks away from the high
+			expectedStopPrice:     55, // This is the stop with an additional 5 ticks as the highest high is 105
+		},
+		{
+			name: "Test LONG position move to BE at 50%",
+			trade: &Trade{
+				TakenAt:     time1,
+				Direction:   "LONG",
+				EntryPrice:  100,
+				StopPrice:   50,
+				TargetPrice: 300,
+			},
+			data: backtestData.Data{
+				&backtestData.Row{Time: time1, High: 111, Low: 90, Open: 105, Close: 100},
+				&backtestData.Row{Time: time2, High: 215, Low: 110, Open: 120, Close: 150},
+				&backtestData.Row{Time: time3, High: 250, Low: 130, Open: 180, Close: 150},
+			},
+			instrumentConfig:      &utils.InstrumentConfiguration{MoveToBreakEvenAt: 50},
+			tickSize:              0.5,
+			expectedClosedAtPrice: 150, // Close at end of session
+			expectedClosedAtTime:  time3,
+			expectedStopPrice:     100, // This is the entry price
+		},
+		{
+			name: "Test SHORT position move to BE at 50%",
+			trade: &Trade{
+				TakenAt:     time1,
+				Direction:   "SHORT",
+				EntryPrice:  200,
+				StopPrice:   300,
+				TargetPrice: 100,
+			},
+			data: backtestData.Data{
+				&backtestData.Row{Time: time1, High: 111, Low: 90, Open: 105, Close: 100},
+				&backtestData.Row{Time: time2, High: 180, Low: 160, Open: 120, Close: 150},
+				&backtestData.Row{Time: time3, High: 180, Low: 130, Open: 180, Close: 150},
+			},
+			instrumentConfig:      &utils.InstrumentConfiguration{MoveToBreakEvenAt: 50},
+			tickSize:              0.5,
+			expectedClosedAtPrice: 150, // Close at end of session
+			expectedClosedAtTime:  time3,
+			expectedStopPrice:     200, // This is the entry price
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.trade.ValidateTradeWithWindow(tt.data, tt.trailingStopAmount, tt.tickSize)
+			tt.trade.ValidateTradeWithWindow(tt.data, tt.instrumentConfig, tt.tickSize)
 
 			if tt.trade.ClosedAtPrice != tt.expectedClosedAtPrice {
 				t.Errorf("expected ClosedAtPrice: %v, got: %v", tt.expectedClosedAtPrice, tt.trade.ClosedAtPrice)

@@ -239,6 +239,12 @@ type Row struct {
 
 	// LowBoundaries is a slice of low boundaries for the candle.
 	LowBoundaries Boundaries `csv:"UnbrokenLow,omitempty"`
+
+	// StochasticK represents the %K value of the stochastic oscillator for the candle.
+	StochasticK float64 `csv:"StochasticK,omitempty"`
+
+	// StochasticD represents the %D value of the stochastic oscillator for the candle.
+	StochasticD float64 `csv:"StochasticD,omitempty"`
 }
 
 // String is a way of formatting the Row
@@ -444,34 +450,102 @@ func (d *Data) CalculateSMA(config *utils.InstrumentConfiguration, tickSize floa
 }
 
 // CalculateUnbrokenHighsLows updates each Row in the Data slice with unbroken highs and lows.
-// It uses lookback to determine the range for finding unbroken highs and lows,
-// and memoryAmount to define how far back to keep track of these values.
-func (d *Data) CalculateUnbrokenHighsLows(leftBars, rightBars, maxBoundaries int) {
+// It uses leftBars and rightBars to determine the range for finding unbroken highs and lows.
+// maxBoundaries defines how far back to keep track of these values.
+// stochasticUpperBand and stochasticLowerBand are thresholds for the stochastic oscillator (%K and %D),
+// used to determine whether to plot high and low pivot boundaries.
+func (d *Data) CalculateUnbrokenHighsLows(
+	leftBars,
+	rightBars,
+	maxBoundaries int,
+	stochasticUpperBand,
+	stochasticLowerBand float64,
+) {
 	for i, row := range *d {
-		// Check if this candle is a high or low pivot
-		highPivot := d.isPivotHigh(i, leftBars, rightBars)
-		lowPivot := d.isPivotLow(i, leftBars, rightBars)
+		// Determine if this candle is a high or low pivot considering the stochastic values
+		// High pivot is valid if both %K and %D are above the stochasticUpperBand
+		highPivot := d.isPivotHigh(i, leftBars, rightBars) &&
+			row.StochasticK > stochasticUpperBand && row.StochasticD > stochasticUpperBand
+		// Low pivot is valid if both %K and %D are below the stochasticLowerBand
+		lowPivot := d.isPivotLow(i, leftBars, rightBars) &&
+			row.StochasticK < stochasticLowerBand && row.StochasticD < stochasticLowerBand
 
-		// Copy the boundaries from the previous candle if it is not the first row
+		// Copy the boundaries from the previous candle, if not the first row
 		if i > 0 {
 			previousRow := (*d)[i-1]
 			row.HighBoundaries = slices.Clone(previousRow.HighBoundaries)
 			row.LowBoundaries = slices.Clone(previousRow.LowBoundaries)
 		}
 
-		// If we are a highPivot then add it to the list of boundaries
+		// Add high pivot to the list of boundaries if it's a valid high pivot
 		if highPivot {
 			row.HighBoundaries.updateBoundaries(row.High, row.Time)
 		}
 
-		// If we are a lowPivot then add it to the list of boundaries
+		// Add low pivot to the list of boundaries if it's a valid low pivot
 		if lowPivot {
 			row.LowBoundaries.updateBoundaries(row.Low, row.Time)
 		}
 
-		// filterOldBoundaries broken boundaries for both highs and lows
+		// Filter out old or broken boundaries for both highs and lows
+		// The filtering is based on the current price and the maximum number of boundaries to track
 		row.HighBoundaries.filterBrokenBoundaries(row.High, true, maxBoundaries)
 		row.LowBoundaries.filterBrokenBoundaries(row.Low, false, maxBoundaries)
+	}
+}
+
+// CalculateStochasticOscillator computes the stochastic oscillator (%K and %D)
+// for each Row in the Data slice. This function requires a predefined number of periods
+// for calculating %K (kPeriods) and %D (dPeriods). The %K value is calculated based on
+// the closing price's position relative to the high-low range over a certain period. %D is
+// then calculated as the simple moving average of %K over the specified number of periods.
+//
+// Parameters:
+// kPeriods: Number of periods to consider for calculating the high-low range and %K.
+// dPeriods: Number of periods to consider for calculating the simple moving average of %K (%D).
+//
+// Note: The function will not calculate the oscillator for Rows where there is insufficient
+// historical data (less than kPeriods). It assumes that the data in Data is ordered chronologically.
+func (d *Data) CalculateStochasticOscillator(kPeriods int, dPeriods int) {
+	// Check if there are enough data points to calculate the oscillator
+	if len(*d) < kPeriods {
+		return // Not enough data to calculate
+	}
+
+	for i := kPeriods - 1; i < len(*d); i++ {
+		// Initialize variables for the highest high and lowest low
+		var lowestLow, highestHigh float64 = math.MaxFloat64, -math.MaxFloat64
+
+		// Iterate over the last kPeriods to find the highest high and lowest low
+		for j := i - kPeriods + 1; j <= i; j++ {
+			if (*d)[j].Low < lowestLow {
+				lowestLow = (*d)[j].Low
+			}
+			if (*d)[j].High > highestHigh {
+				highestHigh = (*d)[j].High
+			}
+		}
+
+		// Calculate %K based on the current closing price, highest high, and lowest low
+		currentClose := (*d)[i].Close
+		// Ensure division by zero is handled
+		if highestHigh != lowestLow {
+			stochasticK := (currentClose - lowestLow) / (highestHigh - lowestLow) * 100
+			(*d)[i].StochasticK = utils.RoundToDecimalLength(stochasticK, 0.00001)
+		} else {
+			(*d)[i].StochasticK = 0 // Assign a default value in case of no price change
+		}
+
+		// Calculate %D as SMA of %K if there are enough data points
+		if i >= kPeriods+dPeriods-1 {
+			sumK := 0.0
+			// Summing %K over dPeriods for the SMA calculation
+			for j := i - dPeriods + 1; j <= i; j++ {
+				sumK += (*d)[j].StochasticK
+			}
+			// Assign the calculated SMA of %K to %D
+			(*d)[i].StochasticD = utils.RoundToDecimalLength(sumK/float64(dPeriods), 0.00001)
+		}
 	}
 }
 

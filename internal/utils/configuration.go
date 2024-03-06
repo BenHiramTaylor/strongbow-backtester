@@ -22,8 +22,8 @@ type InstrumentConfiguration struct {
 	// StopSizeAddition is the number of ticks to add to the stop size.
 	StopSizeAddition int `json:"StopSizeAddition"`
 
-	// TrailingStopAmount is an integer for the amount of ticks to trail the stop by.
-	TrailingStopAmount int `json:"TrailingStopAmount"`
+	// TrailingStop is an integer for the amount of ticks to trail the stop by.
+	TrailingStop bool `json:"TrailingStop"`
 
 	// LargeSMALookbackAmount is the amount of candles to lookback and create a larger rolling moving average with.
 	LargeSMALookbackAmount int `json:"LargeSMALookbackAmount"`
@@ -43,6 +43,21 @@ type InstrumentConfiguration struct {
 	// for example: so if that value is 50 then any unbroken highs/lows are dropped until we are down to 50
 	// starting with the oldest first.
 	UnbrokenBoundaryMemoryLimit int `json:"UnbrokenBoundaryMemoryLimit"`
+
+	// StochasticUpperBand is the upper band for the stochastic oscillator
+	StochasticUpperBand float64 `json:"StochasticUpperBand"`
+
+	// StochasticLowerBand is the lower band for the stochastic oscillator
+	StochasticLowerBand float64 `json:"StochasticLowerBand"`
+
+	// StochasticKPeriods is the number of periods to use for the stochastic oscillator
+	StochasticKPeriods int `json:"StochasticKPeriods"`
+
+	// StochasticDPeriods is the number of periods to use for the stochastic oscillator
+	StochasticDPeriods int `json:"StochasticDPeriods"`
+
+	// MoveToBreakEvenAt is a float64 representing a percentage of profit to move the stop to break even at.
+	MoveToBreakEvenAt float64 `json:"MoveToBreakEvenAt,omitempty"`
 }
 
 // Configuration is a struct representing a read in config.json object
@@ -54,13 +69,16 @@ type Configuration struct {
 	BacktestEndDate JsonDate `json:"BacktestEndDate,omitempty"`
 
 	// Instruments to backtest on
-	Instruments map[string]InstrumentConfiguration `json:"instruments"`
+	Instruments map[string]*InstrumentConfiguration `json:"instruments"`
 
 	// StartingBalance is a number to use as a balance to applied simulated profit to. (optional defaults to 10k)
 	StartingBalance float64 `json:"StartingBalance,omitempty"`
 
 	// Mapping of asset names to tick values (optional)
 	AssetTicks map[string]float64 `json:"AssetTicks,omitempty"`
+
+	// WriteProcessedDataToFile is a boolean to write the processed data to a file (optional defaults to false)
+	WriteProcessedDataToFile bool `json:"WriteProcessedDataToFile,omitempty"`
 }
 
 // newConfiguration This constructor is just an idiomatic wrapper to create default values for fields.
