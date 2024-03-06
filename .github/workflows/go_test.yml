@@ -33,7 +33,7 @@ jobs:
         run: go build -v ./...
 
       - name: Test with the Go CLI
-        run: go test -json ./... -covermode=atomic | tee results.json
+        run: go test ./... -covermode=atomic | tee results.txt
 
       - name: Comment PR with test results
         if: github.event_name == 'pull_request'
@@ -41,7 +41,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const results = fs.readFileSync('results.json', 'utf8');
+            const results = fs.readFileSync('results.txt', 'utf8');
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
