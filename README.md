@@ -1,88 +1,13 @@
-# q7-backtester-go
+# strongbow-backtester
 
-This is the backtesting repository for the Q7 bot. 
+This is the backtesting repository for the Strongbow bot.
 
-TLDR: this takes a playbook & data and returns you results on the efficiency of your strategy.
+TLDR: This takes a config file defining some parameters per futures Asset, and simulates trading it live over the stored
+historical data to determine its profitability.
 
 # Inputs needed
-## Playbook
-
-The playbook is the agreed format for inputting setups with the Q7 team.
-
-The playbook file needs to be in the same directory as the executable, and it needs to be named `Playbook.csv`
-
-There are many columns in the playbook, as shown from this struct:
-
-```go
-// Row is a struct representing one processed row of a Playbook.
-type Row struct {
-// ID is the PlaybookID.
-ID string
-
-// Instrument is the instrument symbol we are testing.
-Instrument string
-
-// Day is the day of the setup.
-Day string[]()
-
-// Session is the session the setup is in, RDR,ODR,ADR.
-Session string
-
-// ConfirmationTime is the time.Time object containing
-// when to look for a confirmation candle for this setup.
-ConfirmationTime time.Time
-
-// LongShort is a string containing either LONG or SHORT for the direction of the trade.
-LongShort string
-
-// RetStart is a legacy column.
-RetStart string
-
-// RetEnd is the time.Time object for when to actually place the trade if all other criteria are met.
-RetEnd time.Time
-
-// R1Low is a legacy column.
-R1Low float64
-
-// R1High is a legacy column.
-R1High float64
-
-// X1Start is a float representing the amount of standard deviations for a setup to place the target at.
-X1Start float64
-
-// MedianRetracement is a legacy column.
-MedianRetracement float64
-
-// MedianExtension is a legacy column.
-MedianExtension float64
-
-// MinR is a float representing the minimum required Risk/Return value to take a trade.
-MinR float64
-
-// PlusStop is a float representing the minimum amount of ticks to add to the stop.
-PlusStop float64
-
-// BreakEvenAt is a float representing the amount of standard deviations
-// for progressing the trades stop to break even.
-BreakEvenAt float64
-
-// MinimumStopSize is a float representing the minimum amount of ticks the stop needs to be,
-// if the stop is below that, then it is set to this value.
-MinimumStopSize float64
-}
-```
-
-We do not actually care about/use the following columns, they are simply legacy:
-
-- RetStart
-- R1Low
-- R1High
-- MedianRetracement
-- MedianExtension
 
 ## Data
-
-The data files are downloaded from the Q7 discord.
 
 This is data that has been historically downloaded from TradeStation and is stored in .csv format.
 
@@ -125,25 +50,71 @@ The config.json file is not required to be on disk, if the file is not found the
 The `Configuration` struct represents the configuration settings loaded from a `config.json` object.
 
 ```go
+// InstrumentConfiguration is a struct representing a specific instrument configuration from config.json object
+type InstrumentConfiguration struct {
+// MinimumRR is the minimum Risk to Reward value to place a trade on.
+MinimumRR float64 `json:"MinimumRR"`
+
+// StopSizeAddition is the number of ticks to add to the stop size.
+StopSizeAddition int `json:"StopSizeAddition"`
+
+// TrailingStop is an integer for the amount of ticks to trail the stop by.
+TrailingStop bool `json:"TrailingStop"`
+
+// LargeSMALookbackAmount is the amount of candles to lookback and create a larger rolling moving average with.
+LargeSMALookbackAmount int `json:"LargeSMALookbackAmount"`
+
+// LargeSMALookbackAmount is the amount of candles to lookback and create a smaller rolling moving average with.
+SmallSMALookbackAmount int `json:"SmallSMALookbackAmount"`
+
+// UnbrokenBoundaryLeftBars is an integer for the amount of candles to look back on the left side to get
+// the unbroken highs and lows using Pivots.
+UnbrokenBoundaryLeftBars int `json:"UnbrokenBoundaryLeftBars"`
+
+// UnbrokenBoundaryRightBars is an integer for the amount of candles to look back on the right side to get
+// the unbroken highs and lows using Pivots.
+UnbrokenBoundaryRightBars int `json:"UnbrokenBoundaryRightBars"`
+
+// UnbrokenBoundaryMemoryLimit is the amount of candles to remember for unbroken highs/lows
+// for example: so if that value is 50 then any unbroken highs/lows are dropped until we are down to 50
+// starting with the oldest first.
+UnbrokenBoundaryMemoryLimit int `json:"UnbrokenBoundaryMemoryLimit"`
+
+// StochasticUpperBand is the upper band for the stochastic oscillator
+StochasticUpperBand float64 `json:"StochasticUpperBand"`
+
+// StochasticLowerBand is the lower band for the stochastic oscillator
+StochasticLowerBand float64 `json:"StochasticLowerBand"`
+
+// StochasticKPeriods is the number of periods to use for the stochastic oscillator
+StochasticKPeriods int `json:"StochasticKPeriods"`
+
+// StochasticDPeriods is the number of periods to use for the stochastic oscillator
+StochasticDPeriods int `json:"StochasticDPeriods"`
+
+// MoveToBreakEvenAt is a float64 representing a percentage of profit to move the stop to break even at.
+MoveToBreakEvenAt float64 `json:"MoveToBreakEvenAt,omitempty"`
+}
+
 // Configuration is a struct representing a read in config.json object
 type Configuration struct {
-// The start date for backtesting (optional)
-BacktestStartDate JsonDate `json:",omitempty"`
+// The start date for back-testing (optional)
+BacktestStartDate JsonDate `json:"BacktestStartDate,omitempty"`
 
-// The end date for backtesting (optional)
-BacktestEndDate JsonDate `json:",omitempty"`
+// The end date for back-testing (optional)
+BacktestEndDate JsonDate `json:"BacktestEndDate,omitempty"`
 
-// Whether wick confirmation is enabled (optional)
-WickConfirmation bool `json:",omitempty"`
+// Instruments to backtest on
+Instruments map[string]*InstrumentConfiguration `json:"instruments"`
 
-// Maximum concurrent trades allowed (optional)
-MaxConcurrentTrades int32 `json:",omitempty"`
-
-// Whether to skip false days (optional)
-SkipFalseDays bool `json:",omitempty"`
+// StartingBalance is a number to use as a balance to applied simulated profit to. (optional defaults to 10k)
+StartingBalance float64 `json:"StartingBalance,omitempty"`
 
 // Mapping of asset names to tick values (optional)
-AssetTicks map[string]float64 `json:",omitempty"`
+AssetTicks map[string]float64 `json:"AssetTicks,omitempty"`
+
+// WriteProcessedDataToFile is a boolean to write the processed data to a file (optional defaults to false)
+WriteProcessedDataToFile bool `json:"WriteProcessedDataToFile,omitempty"`
 }
 ```
 
@@ -161,20 +132,17 @@ The results CSV has the following structure:
 ```go
 // Row is a struct representing one row of the TradeLog output CSV
 type Row struct {
-// PlaybookID is the ID of the playbook row used for the trade.
-PlaybookID string `csv:"PlaybookID"`
-
 // Instrument is the instrument symbol we traded.
 Instrument string `csv:"Instrument"`
 
 // TakenAt is a string representation of the timestamp in which we entered the trade.
-TakenAt string `csv:"TakenAt"`
+TakenAt time.Time `csv:"TakenAt"`
 
-// Position is the direction of the trade, either LONG or SHORT.
-Position string `csv:"Position"`
+// Direction is the direction of the trade, either LONG or SHORT.
+Direction string `csv:"Direction"`
 
-// InitiatedAtPrice is the price value in which we entered the trade.
-InitiatedAtPrice float64 `csv:"InitiatedAtPrice"`
+// EntryPrice is the price value in which we entered the trade.
+EntryPrice float64 `csv:"EntryPrice"`
 
 // StopPrice is the price value in which we had our stop set
 // this could be different from InitialStopPrice if MoveToBreakEvenAt is configured and hit.
@@ -190,36 +158,18 @@ TargetPrice float64 `csv:"TargetPrice"`
 ClosedAtPrice float64 `csv:"ClosedAtPrice"`
 
 // ClosedAtTime is a string representation of the timestamp in which we exited the trade.
-ClosedAtTime string `csv:"ClosedAtTime"`
-
-// ConfirmedAtPrice is the price value at which the confirmation candle was marked as confirmed.
-ConfirmedAtPrice float64 `csv:"ConfirmedAtPrice"`
-
-// ConfirmedAtTime is a string representation of the timestamp in which the confirmation candle closed.
-ConfirmedAtTime string `csv:"ConfirmedAtTime"`
-
-// MoveToBreakEvenAt is the price value at which the trade is configured to move the stop to break even.
-MoveToBreakEvenAt float64 `csv:"MoveToBreakEvenAt"`
-
-// IDRHigh is the price value for the IDRHigh bounds.
-IDRHigh float64 `csv:"IDRHigh"`
-
-// IDRLow is the price value for the IDRLow bounds.
-IDRLow float64 `csv:"IDRLow"`
-
-// DRHigh is the price value for the DRHigh bounds.
-DRHigh float64 `csv:"DRHigh"`
-
-// DRLow is the price value for the DRLow bounds.
-DRLow float64 `csv:"DRLow"`
-
-// Win is a boolean column for if the trade was a winner or not.
-Win bool `csv:"Win"`
+ClosedAtTime time.Time `csv:"ClosedAtTime"`
 
 // TakenAtDate is a string representation for the DATE part only of the TakenAt field.
 TakenAtDate string `csv:"TakenAtDate"`
 
 // TakenAtDate is a string representation for the TIME part only of the TakenAt field.
 TakenAtTime string `csv:"TakenAtTime"`
+
+// Win is a boolean column for if the trade was a winner or not.
+Win bool `csv:"Win"`
+
+// ProfitPercentage is a float representing the total gain or loss, 1.0 would be no change
+Profit float32 `csv:"Profit"`
 }
 ```
