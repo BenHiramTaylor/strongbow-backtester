@@ -6,10 +6,11 @@ on:
       - main
     paths:
       - "**.go"
+  workflow_dispatch:
 
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
