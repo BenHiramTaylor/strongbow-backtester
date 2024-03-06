@@ -31,11 +31,14 @@ jobs:
 
       - name: Test with the Go CLI
         run: go test -json ./... -covermode=atomic | tee results.json
-
       - name: Comment PR with test results
         if: github.event_name == 'pull_request'
-        uses: unsplash/comment-on-pr@v1.3.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: peter-evans/create-or-update-comment@v1
         with:
-          msg: "```\n$(cat results.json)\n```"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ### Test Results
+            ```
+            $(cat results.json)
+            ```
