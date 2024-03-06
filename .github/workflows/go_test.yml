@@ -35,6 +35,7 @@ jobs:
       - name: Comment PR with test results
         if: github.event_name == 'pull_request'
         uses: unsplash/comment-on-pr@v1.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           msg: "```\n$(cat results.json)\n```"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
