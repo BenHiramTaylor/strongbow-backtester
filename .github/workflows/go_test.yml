@@ -33,12 +33,12 @@ jobs:
         run: go test -json ./... -covermode=atomic | tee results.json
       - name: Comment PR with test results
         if: github.event_name == 'pull_request'
-        uses: peter-evans/create-or-update-comment@v1
+        uses: actions/github-script@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ### Test Results
-            ```
-            $(cat results.json)
-            ```
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: $(cat results.json)
+            })
