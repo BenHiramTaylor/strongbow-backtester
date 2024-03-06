@@ -41,7 +41,7 @@ func main() {
 
 	// If any additional tick data is defined in config.json that is NOT in our tick definitions
 	// we add it to ours, we do not overwrite what we have as ours is the primary trusted source
-	// as agreed with the Q7 team
+	// as agreed with the OMITTED team
 	for instrument, tickSize := range userConfiguration.AssetTicks {
 		_, exists := utils.AssetTicks[instrument]
 
