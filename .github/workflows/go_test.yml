@@ -33,7 +33,16 @@ jobs:
         run: go build -v ./...
 
       - name: Test with the Go CLI
-        run: go test ./... -covermode=atomic | tee results.txt
+        run: go test ./... -covermode=atomic -coverprofile=./cover.out  | tee results.txt
+
+      - name: check test coverage
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          profile: cover.out
+          local-prefix: github.com/org/project
+          threshold-file: 75
+          threshold-package: 80
+          threshold-total: 75
 
       - name: Comment PR with test results
         if: github.event_name == 'pull_request'
